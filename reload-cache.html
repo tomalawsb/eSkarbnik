@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="pl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>eSkarbnik — odświeżanie cache</title>
+  <style>
+    body { margin: 0; font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #f4f7fb; color: #0f172a; }
+    main { max-width: 720px; margin: 48px auto; padding: 24px; background: #fff; border: 1px solid #dbe4f0; border-radius: 20px; box-shadow: 0 20px 60px rgba(15, 23, 42, 0.08); }
+    h1 { margin-top: 0; }
+    .box { padding: 14px; border-radius: 14px; background: #eff6ff; border: 1px solid #bfdbfe; color: #1e3a8a; font-weight: 700; }
+    .muted { color: #64748b; }
+    button { margin-top: 18px; padding: 12px 18px; border-radius: 12px; border: 0; background: #2563eb; color: #fff; font-weight: 800; cursor: pointer; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Odświeżanie eSkarbnika</h1>
+    <p class="box" id="status">Czyszczę cache aplikacji i wyłączam stary Service Worker...</p>
+    <p class="muted">To nie usuwa danych finansowych, konfiguracji Firebase ani kopii zapisanych w przeglądarce.</p>
+    <button id="reloadButton" type="button">Wyczyść jeszcze raz i otwórz aplikację</button>
+  </main>
+
+  <script>
+    async function clearAndOpen() {
+      const status = document.getElementById('status');
+      try {
+        if ('serviceWorker' in navigator) {
+          const registrations = await navigator.serviceWorker.getRegistrations();
+          await Promise.all(registrations.map((registration) => registration.unregister()));
+        }
+        if ('caches' in window) {
+          const keys = await caches.keys();
+          await Promise.all(keys.map((key) => caches.delete(key)));
+        }
+        status.textContent = 'Cache wyczyszczony. Otwieram najnowszą wersję aplikacji...';
+      } catch (error) {
+        console.warn(error);
+        status.textContent = 'Nie wszystko udało się wyczyścić automatycznie, ale próbuję otworzyć aplikację z pominięciem starego cache.';
+      }
+      window.setTimeout(() => {
+        window.location.replace('./index.html?v=1.6.3-etap4-clean-ui&fresh=' + Date.now());
+      }, 700);
+    }
+
+    document.getElementById('reloadButton').addEventListener('click', clearAndOpen);
+    clearAndOpen();
+  </script>
+</body>
+</html>

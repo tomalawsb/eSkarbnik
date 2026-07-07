@@ -1,0 +1,28 @@
+﻿# System
+.DS_Store
+Thumbs.db
+
+# Node / Firebase
+node_modules/
+.firebase/
+firebase-debug.log
+firestore-debug.log
+ui-debug.log
+
+# Lokalne sekrety i konfiguracje
+.env
+.env.*
+.firebaserc
+firebase-service-account*.json
+service-account*.json
+
+# Paczki i kopie robocze
+*.zip
+*.bak
+*.tmp
+
+# Narzedzia pobierane lokalnie przez skrypty - nie wysylac na GitHub
+.firebase_node20/
+npm-debug.log*
+.firebase_node20
+

@@ -1,0 +1,821 @@
+<!doctype html>
+<!DOCTYPE html>
+
+<html lang="pl">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1, viewport-fit=cover" name="viewport"/>
+<meta content="#2563eb" name="theme-color"/>
+<meta content="eSkarbnik — PWA do prowadzenia finansów Rady Rodziców, składek, wydatków i kas klasowych." name="description"/>
+<link href="manifest.json" rel="manifest"/>
+<link href="assets/icons/icon-192.png" rel="icon"/>
+<link href="assets/icons/icon-192.png" rel="apple-touch-icon"/>
+<link href="style.css" rel="stylesheet"/>
+<title>eSkarbnik 1.6.3 ETAP 4</title>
+</head>
+<body>
+<button aria-controls="mainNav" aria-expanded="false" aria-label="Otwórz menu" class="floating-menu-button" id="floatingMenuButton" title="Otwórz / zamknij menu" type="button">☰</button>
+<div aria-hidden="true" class="nav-backdrop hidden" id="navBackdrop"></div>
+<div class="app-shell">
+<header class="topbar">
+<div>
+<div class="brand-heading">
+<img alt="Logo eSkarbnik" class="brand-logo" src="assets/logo-eskarbnik-icon.png"/>
+<div>
+<p class="eyebrow">eSkarbnik</p>
+<h1>eSkarbnik</h1>
+<p class="subtitle">Finanse Rady Rodziców.</p>
+</div>
+</div>
+</div>
+<div class="topbar-actions">
+<div aria-label="Wybór roku szkolnego" class="school-year-switcher">
+<label for="schoolYearSelect">Rok szkolny</label>
+<select class="input compact-select" id="schoolYearSelect" title="Wybiera aktywny rok szkolny. Dane w pulpicie, raportach i formularzach są filtrowane według tego roku."></select>
+<button class="ghost-button" data-permission="global-write" id="addSchoolYearButton" title="Dodaje nowy rok szkolny do aplikacji." type="button">Dodaj rok</button>
+</div>
+<span class="status-pill status-muted" id="authStatus">Logowanie: start</span>
+<span class="status-pill status-muted" id="dbStatus">Baza: start</span>
+<span class="status-pill status-ok" id="connectionStatus">Online</span>
+<button class="ghost-button hidden" id="installButton" type="button">Zainstaluj</button>
+</div>
+</header>
+<main class="layout">
+<nav aria-label="Główne menu" class="side-nav" id="mainNav">
+<button class="nav-item active" data-section="dashboard" title="Podsumowanie finansów, sald i braków wpłat." type="button">Pulpit</button>
+<button class="nav-item" data-section="classes" title="Klasy, uczniowie i domyślne składki." type="button">Klasy</button>
+<button class="nav-item" data-section="budgets" title="Rada Rodziców oraz kasy klasowe." type="button">Budżety</button>
+<button class="nav-item" data-section="payments" title="Dodawanie i kontrola wpłat." type="button">Wpłaty</button>
+<button class="nav-item" data-section="expenses" title="Dodawanie wydatków i rozliczeń." type="button">Wydatki</button>
+<button class="nav-item" data-section="categories" title="Kategorie wpłat i wydatków." type="button">Kategorie</button>
+<button class="nav-item" data-section="receipts" title="Analiza tekstu z paragonu." type="button">Paragony</button>
+<button class="nav-item" data-section="reports" title="Eksport CSV, Excel i widok do PDF." type="button">Raporty</button>
+<button class="nav-item" data-section="import" title="Import danych z pliku Excel." type="button">Import</button>
+<button class="nav-item" data-section="sync" title="Synchronizacja danych przez Firebase." type="button">Sync</button>
+<button class="nav-item" data-section="users" title="Logowanie i role użytkowników." type="button">Użytkownicy</button>
+<button class="nav-item" data-section="ai" title="Opcjonalna analiza tekstu paragonu przez AI." type="button">AI</button>
+<button class="nav-item" data-section="settings" title="Cache, kopie, kontrola danych i ustawienia aplikacji." type="button">Ustawienia</button>
+</nav>
+<section class="content">
+<div class="warning-box hidden" id="permissionWarning">Brak aktywnej roli użytkownika. Zaloguj się albo poproś skarbnika Rady Rodziców o nadanie uprawnień.</div>
+<section class="view active-view" id="dashboard">
+<div class="section-title-row">
+<div>
+<h2>Pulpit finansowy</h2><span class="hidden" id="dashboardSchoolYearName">---</span>
+</div>
+<span class="version-badge" id="versionBadge">1.6.3 ETAP 4 - eSkarbnik RR</span>
+</div>
+<article class="panel dashboard-filter-panel">
+<div class="dashboard-filter-grid">
+<div>
+<label class="field-label" for="dashboardBudgetFilter">Budżet</label>
+<select class="input" id="dashboardBudgetFilter">
+<option value="all">Wszystkie budżety</option>
+</select>
+</div>
+<div>
+<label class="field-label" for="dashboardDateFrom">Data od</label>
+<input class="input" id="dashboardDateFrom" type="date"/>
+</div>
+<div>
+<label class="field-label" for="dashboardDateTo">Data do</label>
+<input class="input" id="dashboardDateTo" type="date"/>
+</div>
+<div class="dashboard-filter-actions">
+<button class="ghost-button" id="resetDashboardFiltersButton" type="button">Wyczyść filtry</button>
+</div>
+</div>
+<p class="dashboard-filter-info" id="dashboardFilterInfo">Pokazuję dane z całego aktywnego roku szkolnego.</p>
+</article>
+<div class="cards-grid dashboard-cards-grid">
+<article class="summary-card">
+<span class="card-label">Klasy</span>
+<strong id="totalClasses">0</strong>
+</article>
+<article class="summary-card">
+<span class="card-label">Uczniowie aktywni</span>
+<strong id="activeStudents">0</strong>
+</article>
+<article class="summary-card highlight">
+<span class="card-label">Zebrano</span>
+<strong id="totalPaymentsAmount">0,00 zł</strong>
+<small class="hidden" id="dashboardPaymentsSmall">wpłaty po filtrach</small>
+</article>
+<article class="summary-card">
+<span class="card-label">Wydano</span>
+<strong id="totalExpensesAmount">0,00 zł</strong>
+</article>
+<article class="summary-card">
+<span class="card-label">Saldo</span>
+<strong id="totalBalanceAmount">0,00 zł</strong>
+</article>
+<article class="summary-card">
+<span class="card-label">Wpłaty</span>
+<strong id="totalPayments">0</strong>
+</article>
+<article class="summary-card warning-card">
+<span class="card-label">Braki wpłat</span>
+<strong id="dashboardMissingAmount">0,00 zł</strong>
+<small class="hidden" id="dashboardMissingScope">według domyślnej składki klasowej</small>
+</article>
+<article class="summary-card">
+<span class="card-label">Uczniowie opłaceni</span>
+<strong id="dashboardPaidStudents">0/0</strong>
+</article>
+</div>
+<div class="panel-grid dashboard-split-grid">
+<article class="panel dashboard-money-panel">
+<h3>Rada Rodziców</h3>
+<p><strong>Wpłaty:</strong> <span id="dashboardSchoolPayments">0,00 zł</span></p>
+<p><strong>Wydatki:</strong> <span id="dashboardSchoolExpenses">0,00 zł</span></p>
+<p><strong>Saldo:</strong> <span id="dashboardSchoolBalance">0,00 zł</span></p>
+<p><strong>Braki wpłat:</strong> <span id="dashboardSchoolMissing">0,00 zł</span></p>
+</article>
+<article class="panel dashboard-money-panel">
+<h3>Kasy klasowe</h3>
+<p><strong>Wpłaty:</strong> <span id="dashboardClassPayments">0,00 zł</span></p>
+<p><strong>Wydatki:</strong> <span id="dashboardClassExpenses">0,00 zł</span></p>
+<p><strong>Saldo:</strong> <span id="dashboardClassBalance">0,00 zł</span></p>
+<p><strong>Braki wpłat:</strong> <span id="dashboardClassMissing">0,00 zł</span></p>
+</article>
+</div>
+<div class="dashboard-wide-grid">
+<article class="panel">
+<div class="section-title-row compact-title-row">
+<div>
+<h3>Salda budżetów</h3>
+</div>
+</div>
+<div aria-live="polite" class="dashboard-table-list" id="dashboardBudgetList"></div>
+</article>
+<article class="panel">
+<div class="section-title-row compact-title-row">
+<div>
+<h3>Największe braki wpłat</h3>
+<p id="dashboardMissingTitle">Kontrola wpłat dla budżetu Rady Rodziców.</p>
+</div>
+</div>
+<div aria-live="polite" class="dashboard-table-list" id="dashboardMissingClassesList"></div>
+</article>
+</div>
+<article class="panel">
+<div class="section-title-row compact-title-row">
+<div>
+<h3>Ostatnie operacje</h3>
+</div>
+<div class="button-row compact-actions-row">
+<button class="ghost-button" data-section-jump="payments" type="button">Wpłaty</button>
+<button class="ghost-button" data-section-jump="expenses" type="button">Wydatki</button>
+</div>
+</div>
+<div aria-live="polite" class="dashboard-table-list" id="dashboardRecentActivityList"></div>
+</article>
+</section>
+<section class="view" id="classes">
+<div class="section-title-row">
+<div>
+<h2>Klasy i uczniowie</h2>
+</div>
+<button class="ghost-button" data-permission="global-write" id="newClassButton" type="button">Nowa klasa</button>
+</div>
+<div class="work-grid">
+<article class="panel">
+<h3 id="classFormTitle">Dodaj klasę</h3>
+<form autocomplete="off" class="form-stack" id="classForm">
+<input id="classId" type="hidden"/>
+<label class="field-label" for="className">Klasa</label>
+<input class="input" id="className" maxlength="30" placeholder="np. IVb" required="" type="text"/>
+<label class="field-label" for="classDefaultFee">Domyślna składka</label>
+<div class="money-row">
+<input class="input" id="classDefaultFee" min="0" placeholder="np. 50" step="0.01" title="Domyślna kwota składki używana do kontroli braków wpłat." type="number"/>
+<span>zł</span>
+</div>
+<label class="field-label" for="classNotes">Notatka</label>
+<textarea class="textarea small-textarea" id="classNotes" placeholder="notatka opcjonalna" title="Opcjonalna notatka widoczna przy klasie."></textarea>
+<div class="button-row">
+<button class="primary-button" data-permission="global-write" type="submit">Zapisz klasę</button>
+<button class="ghost-button" id="resetClassFormButton" type="button">Wyczyść</button>
+</div>
+</form>
+</article>
+<article class="panel list-panel">
+<h3>Lista klas</h3>
+<div aria-live="polite" class="entity-list" id="classList"></div>
+</article>
+</div>
+<article class="panel selected-panel hidden" id="selectedClassPanel">
+<div class="section-title-row compact-title-row">
+<div>
+<h3 id="selectedClassName">Wybrana klasa</h3>
+<p id="selectedClassMeta">Brak danych.</p>
+</div>
+<span class="status-pill status-muted" id="selectedClassFee">Składka: 0,00 zł</span>
+</div>
+<div class="work-grid students-grid">
+<div>
+<h4 id="studentFormTitle">Dodaj ucznia</h4>
+<form autocomplete="off" class="form-stack" id="studentForm">
+<input id="studentId" type="hidden"/>
+<label class="field-label" for="studentName">Uczeń</label>
+<input class="input" id="studentName" maxlength="80" placeholder="np. Jan Kowalski" required="" type="text"/>
+<label class="checkbox-row">
+<input checked="" id="studentActive" title="Nieaktywny uczeń zostaje w historii, ale nie jest liczony do bieżącej kontroli wpłat." type="checkbox"/>
+<span>Uczeń aktywny</span>
+</label>
+<div class="button-row">
+<button class="primary-button" data-permission="budget-write" type="submit">Zapisz ucznia</button>
+<button class="ghost-button" id="resetStudentFormButton" type="button">Wyczyść</button>
+</div>
+</form>
+</div>
+<div>
+<h4>Uczniowie w klasie</h4>
+<div aria-live="polite" class="entity-list compact-list" id="studentList"></div>
+</div>
+</div>
+</article>
+<article class="empty-state" id="noClassSelectedInfo">Wybierz klasę z listy albo dodaj nową, żeby dopisać uczniów.</article>
+</section>
+<section class="view" id="budgets">
+<div class="section-title-row">
+<div>
+<h2>Budżety</h2>
+</div>
+<span class="status-pill status-ok">Gotowe</span>
+</div>
+<article class="panel selected-panel">
+<div class="section-title-row compact-title-row">
+<div>
+<h3>Lista budżetów</h3>
+</div>
+</div>
+<div aria-live="polite" class="entity-list" id="budgetList"></div>
+</article>
+</section>
+<section class="view" id="payments">
+<div class="section-title-row">
+<div>
+<h2>Wpłaty</h2>
+</div>
+<span class="status-pill status-ok">Gotowe</span>
+</div>
+<div class="cards-grid dashboard-cards-grid">
+<article class="summary-card">
+<span class="card-label">Liczba wpłat</span>
+<strong id="paymentsCount">0</strong>
+</article>
+<article class="summary-card highlight">
+<span class="card-label">Suma wpłat</span>
+<strong id="paymentsTotal">0,00 zł</strong>
+</article>
+<article class="summary-card">
+<span class="card-label">Rada Rodziców</span>
+<strong id="paymentsSchoolTotal">0,00 zł</strong>
+</article>
+<article class="summary-card">
+<span class="card-label">Kasy klasowe</span>
+<strong id="paymentsClassTotal">0,00 zł</strong>
+</article>
+</div>
+<div class="work-grid">
+<article class="panel">
+<h3 id="paymentFormTitle">Dodaj wpłatę</h3>
+<form autocomplete="off" class="form-stack" id="paymentForm">
+<input id="paymentId" type="hidden"/>
+<label class="field-label" for="paymentBudgetId">Budżet</label>
+<select class="input" id="paymentBudgetId" required="" title="Wybierz, czy wpłata trafia do Rady Rodziców, czy do kasy klasowej."></select>
+<label class="field-label" for="paymentClassId">Klasa</label>
+<select class="input" id="paymentClassId" title="Klasa wymagana przy wpłacie klasowej albo przy kontroli wpłat uczniów."></select>
+<label class="field-label" for="paymentStudentId">Uczeń</label>
+<select class="input" id="paymentStudentId" title="Wybierz ucznia, gdy wpłata ma zmniejszać braki składki."></select>
+<label class="field-label" for="paymentAmount">Kwota</label>
+<div class="money-row">
+<input class="input" id="paymentAmount" min="0.01" placeholder="np. 50" required="" step="0.01" type="number"/>
+<span>zł</span>
+</div>
+<label class="field-label" for="paymentCategoryId">Kategoria</label>
+<select class="input" id="paymentCategoryId" required=""></select>
+<label class="field-label" for="paymentDate">Data</label>
+<input class="input" id="paymentDate" required="" type="date"/>
+<label class="field-label" for="paymentMethod">Metoda</label>
+<select class="input" id="paymentMethod">
+<option value="cash">Gotówka</option>
+<option value="transfer">Przelew</option>
+<option value="donation">Darowizna</option>
+<option value="other">Inne</option>
+</select>
+<label class="field-label" for="paymentPayerName">Wpłacający</label>
+<input class="input" id="paymentPayerName" maxlength="120" placeholder="np. rodzic, darczyńca" title="Osoba wpłacająca albo krótki opis wpłaty ogólnej." type="text"/>
+<label class="field-label" for="paymentNotes">Notatka</label>
+<textarea class="textarea small-textarea" id="paymentNotes" placeholder="notatka opcjonalna" title="Dodatkowa notatka do wpłaty; pole opcjonalne."></textarea>
+<div class="button-row">
+<button class="primary-button" data-permission="budget-write" type="submit">Zapisz wpłatę</button>
+<button class="ghost-button" id="resetPaymentFormButton" type="button">Wyczyść</button>
+</div>
+</form>
+</article>
+<article class="panel list-panel">
+<h3>Lista wpłat</h3>
+<div aria-live="polite" class="entity-list" id="paymentList"></div>
+</article>
+</div>
+<article class="panel selected-panel">
+<div class="section-title-row compact-title-row">
+<div>
+<h3>Kontrola wpłat dla wybranego budżetu</h3>
+</div>
+</div>
+<div aria-live="polite" id="paymentControlList"></div>
+</article>
+</section>
+<section class="view" id="expenses">
+<div class="section-title-row">
+<div>
+<h2>Wydatki</h2>
+</div>
+<span class="status-pill status-ok">Gotowe</span>
+</div>
+<div class="cards-grid dashboard-cards-grid">
+<article class="summary-card">
+<span class="card-label">Liczba wydatków</span>
+<strong id="expensesCount">0</strong>
+</article>
+<article class="summary-card highlight">
+<span class="card-label">Suma wydatków</span>
+<strong id="expensesTotal">0,00 zł</strong>
+</article>
+<article class="summary-card">
+<span class="card-label">Rada Rodziców</span>
+<strong id="expensesSchoolTotal">0,00 zł</strong>
+</article>
+<article class="summary-card">
+<span class="card-label">Kasy klasowe</span>
+<strong id="expensesClassTotal">0,00 zł</strong>
+</article>
+</div>
+<div class="work-grid">
+<article class="panel">
+<h3 id="expenseFormTitle">Dodaj wydatek</h3>
+<form autocomplete="off" class="form-stack" id="expenseForm">
+<input id="expenseId" type="hidden"/>
+<label class="field-label" for="expenseBudgetId">Budżet</label>
+<select class="input" id="expenseBudgetId" required="" title="Budżet, z którego ma zostać rozliczony wydatek."></select>
+<label class="field-label" for="expenseAmount">Kwota</label>
+<div class="money-row">
+<input class="input" id="expenseAmount" min="0.01" placeholder="np. 48.99" required="" step="0.01" type="number"/>
+<span>zł</span>
+</div>
+<label class="field-label" for="expenseDate">Data</label>
+<input class="input" id="expenseDate" required="" type="date"/>
+<label class="field-label" for="expenseCategory">Kategoria</label>
+<select class="input" id="expenseCategory" required=""></select>
+<label class="field-label" for="expenseReceiptNumber">Nr paragonu/faktury</label>
+<input class="input" id="expenseReceiptNumber" maxlength="80" placeholder="np. 12345/2026" title="Numer paragonu lub faktury; pole opcjonalne." type="text"/>
+<label class="field-label" for="expenseSeller">Sklep / sprzedawca</label>
+<input class="input" id="expenseSeller" maxlength="120" placeholder="np. Biedronka, Lidl, księgarnia" title="Sklep lub sprzedawca z dokumentu." type="text"/>
+<label class="field-label" for="expensePaidBy">Zapłacił</label>
+<input class="input" id="expensePaidBy" maxlength="120" placeholder="np. skarbnik, przewodniczący, rodzic" title="Osoba, która fizycznie zapłaciła lub rozliczyła wydatek." type="text"/>
+<label class="field-label" for="expenseDescription">Opis wydatku</label>
+<textarea class="textarea small-textarea" id="expenseDescription" placeholder="opis opcjonalny" title="Krótki opis wydatku; wystarczy, gdy nie masz numeru dokumentu."></textarea>
+<div class="button-row">
+<button class="primary-button" data-permission="budget-write" type="submit">Zapisz wydatek</button>
+<button class="ghost-button" id="resetExpenseFormButton" type="button">Wyczyść</button>
+</div>
+</form>
+</article>
+<article class="panel list-panel">
+<h3>Lista wydatków</h3>
+<div aria-live="polite" class="entity-list" id="expenseList"></div>
+</article>
+</div>
+<article class="panel selected-panel">
+<div class="section-title-row compact-title-row">
+<div>
+<h3>Saldo budżetów</h3>
+</div>
+</div>
+<div aria-live="polite" class="payment-control-list" id="expenseBalanceList"></div>
+</article>
+</section>
+<section class="view" id="categories">
+<div class="section-title-row">
+<div>
+<h2>Kategorie</h2>
+</div>
+<span class="status-pill status-ok">Gotowe</span>
+</div>
+<div class="cards-grid dashboard-cards-grid">
+<article class="summary-card">
+<span class="card-label">Kategorie</span>
+<strong id="categoriesCount">0</strong>
+</article>
+<article class="summary-card highlight">
+<span class="card-label">Zastosowanie</span>
+<strong>Wpłaty i wydatki</strong>
+</article>
+</div>
+<div class="work-grid">
+<article class="panel">
+<h3 id="categoryFormTitle">Dodaj kategorię</h3>
+<form autocomplete="off" class="form-stack" id="categoryForm">
+<input id="categoryId" type="hidden"/>
+<label class="field-label" for="categoryType">Typ</label>
+<select class="input" id="categoryType" required="">
+<option value="expense">Wydatek</option>
+<option value="payment">Wpłata</option>
+</select>
+<label class="field-label" for="categoryName">Nazwa</label>
+<input class="input" id="categoryName" maxlength="80" placeholder="np. Kwiaty, Nagrody, Darowizna" required="" type="text"/>
+<label class="checkbox-row">
+<input checked="" id="categoryActive" title="Nieaktywna kategoria zostaje w historii, ale nie pojawia się przy nowych wpisach." type="checkbox"/>
+<span>Kategoria aktywna</span>
+</label>
+<div class="button-row">
+<button class="primary-button" data-permission="global-write" type="submit">Zapisz kategorię</button>
+<button class="ghost-button" id="resetCategoryFormButton" type="button">Wyczyść</button>
+</div>
+</form>
+</article>
+<article class="panel list-panel" id="categoriesPanel">
+<h3>Kategorie wpłat</h3>
+<div aria-live="polite" class="entity-list category-list" id="paymentCategoryList"></div>
+<h3 class="category-section-title">Kategorie wydatków</h3>
+<div aria-live="polite" class="entity-list category-list" id="expenseCategoryList"></div>
+</article>
+</div>
+</section>
+<section class="view" id="receipts">
+<div class="section-title-row">
+<div>
+<h2>Analiza paragonu</h2>
+</div>
+<span class="status-pill status-muted" id="receiptAiStatus">AI: nieaktywne</span>
+</div>
+<div class="work-grid receipt-grid">
+<article class="panel">
+<h3>Tekst z paragonu</h3>
+<label class="field-label" for="receiptText">Wklejony tekst</label>
+<textarea class="textarea receipt-textarea" id="receiptText" placeholder="Wklej tekst paragonu" title="Wklej tekst skopiowany z paragonu, np. z Obiektywu Google."></textarea>
+<div class="button-row receipt-clipboard-actions">
+<button class="ghost-button" id="pasteReceiptClipboardButton" type="button">Wklej ze schowka</button>
+<button class="primary-button" id="pasteAnalyzeReceiptClipboardButton" type="button">Wklej i analizuj</button>
+</div>
+<div class="button-row">
+<button class="primary-button" id="analyzeReceiptButton" type="button">Analizuj lokalnie</button>
+<button class="ghost-button" id="analyzeReceiptAiButton" type="button">Analizuj AI</button>
+<button class="ghost-button" id="clearReceiptButton" type="button">Wyczyść</button>
+</div>
+</article>
+<article class="panel">
+<h3>Wynik analizy</h3>
+<div class="receipt-analysis-summary empty-state" id="receiptAnalysisSummary">Wklej tekst paragonu albo użyj przycisku „Wklej i analizuj”.</div>
+<form autocomplete="off" class="form-stack receipt-expense-form" id="receiptExpenseForm">
+<label class="field-label" for="receiptExpenseBudgetId">Budżet wydatku</label>
+<select class="input" id="receiptExpenseBudgetId" required=""></select>
+<label class="field-label" for="receiptExpenseAmount">Kwota</label>
+<div class="money-row">
+<input class="input" id="receiptExpenseAmount" min="0.01" placeholder="np. 48.99" required="" step="0.01" type="number"/>
+<span>zł</span>
+</div>
+<label class="field-label" for="receiptExpenseDate">Data</label>
+<input class="input" id="receiptExpenseDate" required="" type="date"/>
+<label class="field-label" for="receiptExpenseCategory">Kategoria</label>
+<select class="input" id="receiptExpenseCategory" required=""></select>
+<label class="field-label" for="receiptExpenseNumber">Nr paragonu/faktury</label>
+<input class="input" id="receiptExpenseNumber" maxlength="80" placeholder="np. 12345/2026" type="text"/>
+<label class="field-label" for="receiptExpenseSeller">Sklep / sprzedawca</label>
+<input class="input" id="receiptExpenseSeller" maxlength="120" placeholder="np. Biedronka, Lidl, księgarnia" type="text"/>
+<label class="field-label" for="receiptExpenseDescription">Opis wydatku</label>
+<textarea class="textarea small-textarea" id="receiptExpenseDescription" placeholder="Opis wydatku"></textarea>
+<div class="button-row">
+<button class="ghost-button" id="copyReceiptToExpenseButton" type="button">Przenieś do wydatku</button>
+<button class="primary-button" data-permission="budget-write" id="saveReceiptExpenseButton" type="submit">Zapisz jako wydatek</button>
+</div>
+</form>
+</article>
+</div>
+</section>
+<section class="view" id="reports">
+<div class="section-title-row">
+<div>
+<h2>Raporty</h2>
+</div>
+<span class="status-pill status-ok">Gotowe</span>
+</div>
+<div class="cards-grid dashboard-cards-grid">
+<article class="summary-card">
+<span class="card-label">Rok szkolny</span>
+<strong id="reportsSchoolYearName">---</strong>
+</article>
+<article class="summary-card highlight">
+<span class="card-label">Zebrano</span>
+<strong id="reportsPaymentsTotal">0,00 zł</strong>
+</article>
+<article class="summary-card">
+<span class="card-label">Wydano</span>
+<strong id="reportsExpensesTotal">0,00 zł</strong>
+</article>
+<article class="summary-card">
+<span class="card-label">Saldo</span>
+<strong id="reportsBalanceTotal">0,00 zł</strong>
+</article>
+</div>
+<div class="work-grid reports-grid">
+<article class="panel">
+<h3>Ustawienia raportu</h3>
+<div class="form-stack">
+<label class="field-label" for="reportType">Rodzaj raportu</label>
+<select class="input" id="reportType">
+<option value="full">Pełny raport</option>
+<option value="summary">Podsumowanie</option>
+<option value="payments">Wpłaty</option>
+<option value="expenses">Wydatki</option>
+<option value="missing">Braki wpłat</option>
+<option value="balances">Salda budżetów</option>
+</select>
+<label class="field-label" for="reportBudgetFilter">Budżet</label>
+<select class="input" id="reportBudgetFilter">
+<option value="all">Wszystkie budżety</option>
+</select>
+<div class="two-columns">
+<div>
+<label class="field-label" for="reportDateFrom">Data od</label>
+<input class="input" id="reportDateFrom" type="date"/>
+</div>
+<div>
+<label class="field-label" for="reportDateTo">Data do</label>
+<input class="input" id="reportDateTo" type="date"/>
+</div>
+</div>
+<div class="button-row report-button-row">
+<button class="primary-button" id="exportCsvButton" type="button">Eksport CSV</button>
+<button class="ghost-button" id="exportXlsxButton" type="button">Eksport Excel</button>
+<button class="ghost-button" id="exportPdfButton" type="button">Drukuj / zapisz PDF</button>
+<button class="ghost-button" id="resetReportFiltersButton" type="button">Wyczyść filtry</button>
+</div>
+</div>
+</article>
+<article class="panel list-panel">
+<h3>Podgląd raportu</h3>
+<p class="dashboard-filter-info" id="reportsFilterInfo">Raport obejmuje cały aktywny rok szkolny.</p>
+<div aria-live="polite" class="report-preview" id="reportsPreview"></div>
+</article>
+</div>
+</section>
+<section class="view" id="import">
+<div class="section-title-row">
+<div>
+<h2>Import z Excela</h2>
+</div>
+<span class="version-badge">Gotowe</span>
+</div>
+<div class="work-grid import-grid">
+<article class="panel">
+<h3>Plik do importu</h3>
+<form autocomplete="off" class="form-stack" id="importForm">
+<label class="field-label" for="importFile">Plik Excel `.xlsx`</label>
+<input accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" class="input" id="importFile" required="" type="file"/>
+<label class="field-label" for="importDate">Data wpisów</label>
+<input class="input" id="importDate" required="" type="date"/>
+<label class="field-label" for="importDefaultFee">Domyślna składka</label>
+<div class="money-row">
+<input class="input" id="importDefaultFee" min="0" step="0.01" type="number" value="10"/>
+<span>zł</span>
+</div>
+<label class="checkbox-row">
+<input id="importClearYear" title="Usuwa dane aktywnego roku przed zapisaniem importu, żeby nie tworzyć duplikatów." type="checkbox"/>
+<span>Wyczyść rok przed importem</span>
+</label>
+<div class="button-row report-button-row">
+<button class="primary-button" data-permission="global-write" id="analyzeImportButton" type="submit">Analizuj plik</button>
+<button class="ghost-button" disabled="" id="saveImportButton" type="button">Importuj</button>
+<button class="ghost-button" id="resetImportButton" type="button">Wyczyść</button>
+</div>
+</form>
+</article>
+<article class="panel list-panel">
+<h3>Wynik analizy</h3>
+<div class="cards-grid import-summary-grid">
+<article class="summary-card">
+<span class="card-label">Klasy</span>
+<strong id="importClassesCount">0</strong>
+</article>
+<article class="summary-card">
+<span class="card-label">Uczniowie</span>
+<strong id="importStudentsCount">0</strong>
+</article>
+<article class="summary-card highlight">
+<span class="card-label">Wpłaty</span>
+<strong id="importPaymentsCount">0</strong>
+</article>
+<article class="summary-card">
+<span class="card-label">Wydatki</span>
+<strong id="importExpensesCount">0</strong>
+</article>
+</div>
+<div class="receipt-warning-list hidden" id="importWarnings"></div>
+<div aria-live="polite" class="report-preview import-preview" id="importPreview">
+<div class="empty-state">Wybierz plik Excel i kliknij „Analizuj plik”.</div>
+</div>
+</article>
+</div>
+</section>
+<section class="view" id="sync">
+<div class="section-title-row">
+<div>
+<h2>Synchronizacja Firebase</h2>
+</div>
+<span class="status-pill status-muted" id="syncStatusText">Firebase: brak konfiguracji</span>
+</div>
+<div class="panel-grid sync-grid">
+<article class="panel form-panel">
+<h3>Konfiguracja połączenia</h3>
+<label class="field-label" for="syncWorkspaceId">Obszar synchronizacji</label>
+<input autocomplete="off" class="input" id="syncWorkspaceId" placeholder="np. eskarbnik-zsp-czermin" title="Ta sama nazwa na komputerze i telefonie oznacza ten sam zestaw danych." type="text"/>
+<label class="field-label" for="firebaseConfigInput">Firebase config</label>
+<textarea class="textarea sync-config-textarea" id="firebaseConfigInput" placeholder="const firebaseConfig = { ... };" spellcheck="false" title="Pole awaryjne do nadpisania konfiguracji Firebase, gdy zmienisz projekt."></textarea>
+<div class="button-row wrap-row">
+<button class="primary-button" data-sync-action="save" id="saveFirebaseConfigButton" type="button">Zapisz konfigurację</button>
+<button class="ghost-button" data-sync-action="test" id="testFirebaseButton" type="button">Test połączenia</button>
+<button class="ghost-button" id="clearFirebaseConfigButton" type="button">Usuń konfigurację</button>
+</div>
+</article>
+<article class="panel list-panel">
+<h3>Operacje synchronizacji</h3>
+<div class="sync-action-grid">
+<button class="primary-button" data-permission="global-write" data-sync-action="upload" id="uploadToFirebaseButton" type="button">Wyślij dane</button>
+<button class="ghost-button" data-permission="global-write" data-sync-action="download" id="downloadFromFirebaseButton" type="button">Pobierz dane</button>
+<button class="ghost-button" data-permission="global-write" data-sync-action="merge" id="mergeFirebaseButton" type="button">Synchronizuj</button>
+</div>
+<div class="sync-status-box">
+<p id="syncLastInfo">Brak wykonanej synchronizacji na tym urządzeniu.</p>
+<p id="syncSnapshotInfo">Nie odczytano jeszcze zapisu z Firebase.</p>
+</div>
+</article>
+</div>
+</section>
+<section class="view" id="users">
+<div class="section-title-row">
+<div>
+<h2>Użytkownicy i role</h2>
+</div>
+<span class="status-pill status-muted" id="roleStatusText">Rola: sprawdzanie</span>
+</div>
+<div class="panel-grid users-grid">
+<article class="panel form-panel">
+<h3>Logowanie</h3>
+<form autocomplete="off" class="form-stack" id="loginForm">
+<label class="field-label" for="loginEmail">E-mail</label>
+<input autocomplete="username" class="input" id="loginEmail" placeholder="np. skarbnik@szkola.pl" title="Adres e-mail konta w Firebase Authentication." type="email"/>
+<label class="field-label" for="loginPassword">Hasło</label>
+<input autocomplete="current-password" class="input" id="loginPassword" placeholder="minimum 6 znaków" title="Hasło konta e-mail/hasło. Minimum 6 znaków." type="password"/>
+<label class="field-label" for="loginPasswordConfirm">Powtórz hasło</label>
+<input autocomplete="new-password" class="input" id="loginPasswordConfirm" placeholder="powtórz hasło przy tworzeniu konta" title="Wypełnij przy tworzeniu konta. Przy zwykłym logowaniu to pole jest ignorowane." type="password"/>
+<div class="button-row wrap-row auth-button-row">
+<button class="primary-button" id="loginButton" title="Loguje istniejące konto e-mail/hasło z Firebase Authentication." type="submit">Zaloguj</button>
+<button class="ghost-button" id="createAccountButton" title="Tworzy nowe konto e-mail/hasło w Firebase Authentication. Wymaga powtórzenia hasła." type="button">Utwórz</button>
+<button class="ghost-button" id="googleLoginButton" title="Loguje przez Google. Na telefonie użyje przekierowania, a na komputerze okna Google." type="button">Google</button>
+<button class="ghost-button" id="logoutButton" title="Wylogowuje aktualne konto z tej przeglądarki." type="button">Wyloguj</button>
+</div>
+</form>
+<div class="sync-status-box">
+<p><strong>Status:</strong> <span id="loginStatusText">sprawdzanie</span></p>
+<p><strong>E-mail:</strong> <span id="currentUserEmail">brak</span></p>
+<p><strong>UID:</strong> <span id="currentUserUid">brak</span></p>
+<p><strong>Rola:</strong> <span id="currentUserRole">brak</span></p>
+</div>
+<div class="info-box hidden" id="authHelpBox"></div>
+<div class="button-row wrap-row">
+<button class="ghost-button" id="setFirstAdminButton" title="Po zalogowaniu nadaje bieżącemu kontu rolę skarbnika Rady. Przy finalnych regułach Firestore pierwszy raz może wymagać reguł bootstrap albo ręcznego wpisu w Firestore." type="button">Nadaj mi rolę skarbnika</button>
+<button class="ghost-button" id="showAuthSetupButton" title="Pokazuje krótką instrukcję, co musi być włączone w Firebase Console." type="button">Pomoc Firebase</button>
+</div>
+</article>
+<article class="panel form-panel">
+<h3>Nadawanie uprawnień</h3>
+<label class="field-label" for="roleUid">UID użytkownika</label>
+<input class="input" id="roleUid" placeholder="UID z pola Status po zalogowaniu" title="UID użytkownika z Firebase Authentication. Nie wpisuj tu e-maila." type="text"/>
+<button class="ghost-button small-inline-button" id="fillCurrentUidButton" type="button">Wstaw mój UID</button>
+<label class="field-label" for="roleEmail">E-mail</label>
+<input class="input" id="roleEmail" placeholder="np. skarbnik.5b@szkola.pl" title="Opisowy e-mail użytkownika; pomaga rozpoznać osobę na liście ról." type="email"/>
+<label class="field-label" for="roleType">Rola</label>
+<select class="input" id="roleType" title="Główne uprawnienie użytkownika w aplikacji.">
+<option value="schoolTreasurer">Skarbnik Rady Rodziców</option>
+<option value="classTreasurer">Skarbnik klasy</option>
+<option value="viewer">Podgląd</option>
+</select>
+<label class="field-label">Dostęp do kas klasowych</label>
+<div class="checkbox-list role-class-list" id="roleClassList"></div>
+<div class="button-row wrap-row">
+<button class="primary-button" data-permission="user-admin" id="saveRoleButton" type="button">Zapisz rolę</button>
+<button class="danger-button" data-permission="user-admin" id="deleteRoleButton" type="button">Usuń rolę</button>
+<button class="ghost-button" id="resetRoleFormButton" type="button">Wyczyść</button>
+</div>
+</article>
+</div>
+<article class="panel list-panel">
+<div class="section-title-row compact-title-row">
+<div>
+<h3>Lista ról</h3>
+</div>
+</div>
+<div aria-live="polite" class="entity-list" id="userRolesList"></div>
+</article>
+</section>
+<section class="view" id="ai">
+<div class="section-title-row">
+<div>
+<h2>AI — analiza tekstu</h2>
+</div>
+<span class="status-pill status-muted" id="aiGlobalStatus">AI: nie skonfigurowane</span>
+</div>
+<div class="work-grid ai-grid">
+<article class="panel form-panel">
+<h3>Konfiguracja AI</h3>
+<label class="checkbox-row">
+<input id="aiEnabled" type="checkbox"/>
+<span>Włącz analizę AI</span>
+</label>
+<label class="field-label" for="aiEndpoint">Endpoint API</label>
+<input autocomplete="off" class="input" id="aiEndpoint" placeholder="https://api.openai.com/v1/chat/completions" type="url"/>
+<label class="field-label" for="aiModel">Model</label>
+<input autocomplete="off" class="input" id="aiModel" placeholder="np. gpt-4o-mini" type="text"/>
+<label class="field-label" for="aiApiKey">Klucz API</label>
+<input autocomplete="off" class="input" id="aiApiKey" placeholder="wklej klucz API" type="password"/>
+<label class="field-label" for="aiTemperature">Temperatura</label>
+<input class="input" id="aiTemperature" max="1" min="0" step="0.1" type="number" value="0.1"/>
+<div class="button-row wrap-row">
+<button class="primary-button" id="saveAiSettingsButton" type="button">Zapisz AI</button>
+<button class="ghost-button" id="testAiButton" type="button">Test AI</button>
+<button class="ghost-button" id="clearAiSettingsButton" type="button">Usuń AI</button>
+</div>
+</article>
+<article class="panel list-panel"><h3>Test AI</h3><div class="ai-test-result empty-state" id="aiTestResult">Zapisz ustawienia i wykonaj test połączenia.</div></article>
+</div>
+</section>
+<section class="view" id="settings">
+<h2>Ustawienia</h2>
+<div class="settings-list">
+<div class="setting-row">
+<div>
+<strong>Lokalna baza danych</strong>
+<p id="storageStatus">IndexedDB: sprawdzanie.</p>
+</div>
+<span class="status-pill status-ok">Gotowe</span>
+</div>
+<div class="setting-row">
+<div>
+<strong>Wersja i cache aplikacji</strong>
+<p id="appVersionInfo">Wersja: sprawdzanie.</p>
+</div>
+<div class="button-row wrap-row settings-button-row">
+<button class="primary-button" id="refreshAppCacheButton" type="button">Odśwież cache</button>
+<button class="ghost-button" id="openCacheReloadFileButton" type="button">Awaryjne czyszczenie</button>
+</div>
+</div>
+<div class="setting-row">
+<div>
+<strong>AI</strong>
+<p id="settingsAiText">AI nie jest skonfigurowane. Aplikacja nadal działa lokalnie bez AI.</p>
+</div>
+<span class="status-pill status-muted" id="settingsAiStatus">Nieaktywne</span>
+</div>
+<div class="setting-row">
+<div>
+<strong>Synchronizacja i logowanie</strong>
+<p id="settingsSyncText">Firebase nie jest skonfigurowany. Dane działają tylko lokalnie.</p>
+</div>
+<span class="status-pill status-muted" id="settingsSyncStatus">Nieaktywny</span>
+</div>
+<div class="setting-row">
+<div>
+<strong>Kontrola danych</strong>
+<div class="audit-box audit-ok" id="dataAuditStatus">Kontrola zostanie pokazana po uruchomieniu aplikacji.</div>
+</div>
+<button class="ghost-button" data-permission="global-write" id="runDataAuditButton" type="button">Sprawdź dane</button>
+</div>
+<div class="setting-row">
+<div>
+<strong>Kopia zapasowa JSON</strong>
+<input accept="application/json,.json" class="hidden" id="importBackupInput" type="file"/>
+</div>
+<div class="button-row wrap-row settings-button-row">
+<button class="ghost-button" data-permission="global-write" id="exportBackupButton" type="button">Pobierz kopię</button>
+<button class="ghost-button" data-permission="global-write" id="importBackupButton" type="button">Przywróć kopię</button>
+</div>
+</div>
+<div class="setting-row danger-row">
+<div>
+<strong>Wyczyść dane lokalne</strong>
+</div>
+<button class="danger-button" data-permission="global-write" id="clearLocalDataButton" type="button">Wyczyść</button>
+</div>
+</div>
+</section>
+</section>
+</main>
+</div>
+<div aria-live="polite" class="toast hidden" id="toast" role="status"></div>
+<script defer="" src="db.js?v=1.6.3-etap4-clean-ui"></script>
+<script defer="" src="app.js?v=1.6.3-etap4-clean-ui"></script>
+</body>
+</html>

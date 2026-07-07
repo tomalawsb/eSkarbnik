@@ -1,0 +1,5 @@
+{
+  "projects": {
+    "default": "TWOJ_FIREBASE_PROJECT_ID"
+  }
+}

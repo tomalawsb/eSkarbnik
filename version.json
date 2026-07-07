@@ -1,0 +1,7 @@
+{
+  "app": "eSkarbnik RR",
+  "version": "1.6.3 ETAP 4",
+  "build": "2026-07-07-etap4-clean-ui",
+  "cache": "eskarbnik-v1-6-3-etap4-clean-ui",
+  "note": "Etap 4: czyszczenie interfejsu — opisy usunięte z ekranu, tooltipy zachowane, etykiety skrócone, ustawienia skonsolidowane."
+}

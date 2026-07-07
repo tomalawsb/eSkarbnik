@@ -1,0 +1,43 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function rolePath(workspaceId, uid) {
+      return /databases/$(database)/documents/radaRodzicowPro/$(workspaceId)/roles/$(uid);
+    }
+
+    function isSchoolTreasurer(workspaceId) {
+      return signedIn()
+        && exists(rolePath(workspaceId, request.auth.uid))
+        && get(rolePath(workspaceId, request.auth.uid)).data.role in ['schoolTreasurer', 'admin'];
+    }
+
+    match /radaRodzicowPro/{workspaceId}/roles/{uid} {
+      // TYMCZASOWE: użyć tylko do utworzenia pierwszego skarbnika Rady Rodziców.
+      // Po tym natychmiast wrócić do firestore.rules.
+      allow create: if signedIn()
+        && request.auth.uid == uid
+        && request.resource.data.role == 'schoolTreasurer'
+        && request.resource.data.email is string
+        && request.resource.data.classIds is list
+        && !exists(rolePath(workspaceId, uid));
+
+      allow read, update, delete: if isSchoolTreasurer(workspaceId);
+    }
+
+    match /radaRodzicowPro/{workspaceId}/snapshots/main {
+      allow read, write: if isSchoolTreasurer(workspaceId);
+    }
+
+    match /radaRodzicowPro/{workspaceId}/classSnapshots/{classId} {
+      allow read, write: if isSchoolTreasurer(workspaceId);
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

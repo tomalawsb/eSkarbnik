@@ -1,0 +1,85 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function rolePath(workspaceId, uid) {
+      return /databases/$(database)/documents/radaRodzicowPro/$(workspaceId)/roles/$(uid);
+    }
+
+    function roleDoc(workspaceId) {
+      return get(rolePath(workspaceId, request.auth.uid)).data;
+    }
+
+    function hasRole(workspaceId, roles) {
+      return signedIn()
+        && exists(rolePath(workspaceId, request.auth.uid))
+        && roleDoc(workspaceId).role in roles;
+    }
+
+    function isSchoolTreasurer(workspaceId) {
+      return hasRole(workspaceId, ['schoolTreasurer', 'admin']);
+    }
+
+    function hasClassAccess(workspaceId, classId) {
+      return signedIn()
+        && exists(rolePath(workspaceId, request.auth.uid))
+        && roleDoc(workspaceId).classIds is list
+        && classId in roleDoc(workspaceId).classIds;
+    }
+
+    function canReadClassPrivate(workspaceId, classId) {
+      return hasClassAccess(workspaceId, classId)
+        && hasRole(workspaceId, ['schoolTreasurer', 'classTreasurer', 'viewer', 'admin']);
+    }
+
+    function canWriteClassPrivate(workspaceId, classId) {
+      return hasClassAccess(workspaceId, classId)
+        && hasRole(workspaceId, ['schoolTreasurer', 'classTreasurer', 'admin']);
+    }
+
+    function isValidSnapshot() {
+      return request.resource.data.appName == 'eSkarbnik'
+        && request.resource.data.appVersion is string
+        && request.resource.data.exportedAt is string
+        && request.resource.data.stores is map;
+    }
+
+    function isValidRole() {
+      return request.resource.data.role in ['schoolTreasurer', 'classTreasurer', 'viewer', 'admin']
+        && request.resource.data.email is string
+        && request.resource.data.classIds is list;
+    }
+
+    // Zakres Rady Rodziców: składki na Radę, wydatki Rady, klasy i uczniowie jako ewidencja szkolna.
+    // Nie przechowujemy tu prywatnych wpłat/wydatków kas klasowych.
+    match /radaRodzicowPro/{workspaceId}/snapshots/main {
+      allow get: if isSchoolTreasurer(workspaceId);
+      allow list: if false;
+      allow create, update: if isSchoolTreasurer(workspaceId) && isValidSnapshot();
+      allow delete: if isSchoolTreasurer(workspaceId);
+    }
+
+    // Zakres prywatny klasy: wpłaty klasowe, wydatki klasowe i saldo konkretnej klasy.
+    match /radaRodzicowPro/{workspaceId}/classSnapshots/{classId} {
+      allow get: if canReadClassPrivate(workspaceId, classId);
+      allow list: if false;
+      allow create, update: if canWriteClassPrivate(workspaceId, classId) && isValidSnapshot()
+        && request.resource.data.classId == classId;
+      allow delete: if canWriteClassPrivate(workspaceId, classId);
+    }
+
+    match /radaRodzicowPro/{workspaceId}/roles/{uid} {
+      allow get: if signedIn() && (request.auth.uid == uid || isSchoolTreasurer(workspaceId));
+      allow list: if isSchoolTreasurer(workspaceId);
+      allow create, update: if isSchoolTreasurer(workspaceId) && isValidRole();
+      allow delete: if isSchoolTreasurer(workspaceId) && request.auth.uid != uid;
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
